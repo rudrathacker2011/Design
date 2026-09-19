@@ -1,0 +1,268 @@
+/* ============================================================
+   YatraSetu — Indian Heritage Design System
+   ============================================================
+   DESIGN ZONE: Safe to modify all values below.
+   Use var(--token) in all component CSS — never hardcode hex.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=DM+Sans:wght@300;400;500;600&family=Noto+Serif+Devanagari:wght@400;600&display=swap');
+
+/* ── Colour Palette ─────────────────────────────────────── */
+:root {
+  /* Backgrounds — warm earthy dark, inspired by Indian ink & temple stone */
+  --bg-primary:       #140c04;       /* Deep neem-bark brown */
+  --bg-secondary:     #1e1108;       /* Rich dark sandalwood */
+  --bg-sidebar:       rgba(22, 12, 4, 0.85);
+  --bg-hover:         rgba(249, 115, 22, 0.08);  /* saffron tint hover */
+  --bg-active:        rgba(212, 160, 23, 0.12);  /* gold tint active */
+  --bg-panel:         rgba(30, 18, 8, 0.72);
+
+  /* Accent Colours — the 5 temple colours of Indian festivity */
+  --accent-saffron:   #f97316;   /* Saffron — primary actions, GO */
+  --accent-gold:      #d4a017;   /* Temple gold — rewards, highlights */
+  --accent-teal:      #0d9488;   /* Peacock teal — mobility, success */
+  --accent-crimson:   #c0392b;   /* Royal crimson — caution, SOS */
+  --accent-indigo:    #4f46e5;   /* Deep indigo — trust, verified */
+  --accent-green:     #16a34a;   /* Neem green — GO, confirmed */
+  --accent-amber:     #d97706;   /* MODIFY amber */
+  --accent-red:       #dc2626;   /* Alert red */
+
+  /* Text */
+  --text-primary:     #fdf4e7;   /* Warm ivory parchment */
+  --text-secondary:   #c9a97a;   /* Aged sandstone mid-tone */
+  --text-muted:       #8b6e4e;   /* Weathered terracotta */
+
+  /* Borders — inspired by carved stone joint lines */
+  --border-color:     rgba(212, 160, 23, 0.18);
+  --border-strong:    rgba(212, 160, 23, 0.35);
+
+  /* Decorative */
+  --jaali-opacity:    0.04;       /* Subtle jali pattern opacity */
+  --glass-blur:       14px;
+
+  /* Typography */
+  --font-heading: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
+  --font-devanagari: 'Noto Serif Devanagari', serif;
+}
+
+/* ── Reset & Base ───────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+
+  /* Subtle jaali (jali lattice) dot pattern overlay */
+  background-image:
+    radial-gradient(circle, rgba(212,160,23,0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+/* Headings use the heritage serif font */
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+  margin-top: 0;
+}
+
+h4, h5, h6, p, span, label, button, input, select, textarea {
+  margin-top: 0;
+  font-family: var(--font-body);
+}
+
+button, select, textarea, input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ── Glassmorphism Panel (Heritage Edition) ─────────────── */
+/* 
+  DESIGN NOTE: This is the primary surface for all cards/panels.
+  Override per-component by adding additional background styles.
+*/
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  /* Top border glows gold like temple gilding */
+  box-shadow:
+    0 1px 0 0 rgba(212, 160, 23, 0.3),
+    0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Shared Badge Row (used across all pages) ──────────── */
+.badge-row {
+  display: flex;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Heritage badge variants */
+.pill-saffron {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.pill-purple {
+  background: rgba(79, 70, 229, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(79, 70, 229, 0.3);
+}
+
+.pill-gold {
+  background: rgba(212, 160, 23, 0.18);
+  color: #f5c842;
+  border: 1px solid rgba(212, 160, 23, 0.4);
+}
+
+.pill-blue {
+  background: rgba(13, 148, 136, 0.15);
+  color: #5eead4;
+  border: 1px solid rgba(13, 148, 136, 0.3);
+}
+
+.pill-green {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+
+.pill-red {
+  background: rgba(220, 38, 38, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+/* ── Shared Sub-label (used across all pages) ────────────── */
+.sub-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Text helpers ────────────────────────────────────────── */
+.text-green   { color: #4ade80; }
+.text-amber   { color: #fbbf24; }
+.text-red     { color: #f87171; }
+.text-gold    { color: var(--accent-gold); }
+.text-teal    { color: var(--accent-teal); }
+.text-blue    { color: #60a5fa; }
+.text-purple  { color: #a5b4fc; }
+.text-secondary { color: var(--text-secondary); }
+
+/* ── Icon badge containers ───────────────────────────────── */
+.icon-blue   { background: rgba(13, 148, 136, 0.18); color: #5eead4; }
+.icon-green  { background: rgba(22, 163, 74, 0.18);  color: #4ade80; }
+.icon-red    { background: rgba(220, 38, 38, 0.18);  color: #f87171; }
+.icon-purple { background: rgba(79, 70, 229, 0.18);  color: #a5b4fc; }
+.icon-gold   { background: rgba(212, 160, 23, 0.18); color: #f5c842; }
+
+/* ── Primary & Secondary Buttons (global) ───────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, var(--accent-saffron), #ea580c);
+  color: #ffffff;
+  padding: 0.75rem 1.4rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  transition: all 0.22s ease;
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.35);
+  font-family: var(--font-body);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(249, 115, 22, 0.52);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(212, 160, 23, 0.08);
+  color: var(--text-primary);
+  padding: 0.75rem 1.4rem;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border: 1px solid var(--border-strong);
+  transition: all 0.22s ease;
+  font-family: var(--font-body);
+}
+
+.btn-secondary:hover {
+  background: rgba(212, 160, 23, 0.15);
+}
+
+.btn-saved {
+  background: rgba(22, 163, 74, 0.18);
+  color: #4ade80;
+  border-color: rgba(22, 163, 74, 0.4);
+}
+
+/* ── Ornamental divider (reuse anywhere) ─────────────────── */
+.heritage-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.heritage-divider::before,
+.heritage-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+}
+
+/* ── Scrollbar styling ─────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 160, 23, 0.3);
+  border-radius: 999px;
+}
