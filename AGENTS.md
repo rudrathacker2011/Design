@@ -12,17 +12,15 @@ Support → Adaptive itinerary → Feedback. Full source: `context/01_product_ov
 
 ## 1. Context index — load only what the task needs
 Never read the whole PRD for a small task. Check `context/00_index.md` first; it tells you
-which file(s) are relevant to the task at hand. Load 1–3 files max per task unless doing a
-full architecture pass.
+which file(s) are relevant to the task at hand. For backend tasks, read `YatraSetu_Backend_Implementation_Specification_v1.0.md`. Load 1–3 files max per task unless doing a full architecture pass.
 
 ## 2. Standing operating workflow (every non-trivial task)
 1. **Understand the objective** — restate the goal in one sentence before acting.
 2. **Inspect the existing system** — read relevant code/context files; never assume state.
 3. **Discuss before deciding** — for anything touching product behavior or architecture, run
    the matching skill (see §3) instead of silently picking an approach.
-4. **Create an implementation plan** — use `skills/plan-implementation.md` format. Short plans
-   for small tasks; don't over-plan.
-5. **Execute** — small, verifiable diffs. Use `skills/execute-task.md` discipline.
+4. **Create an implementation plan** — use `skills/plan-implementation.md` format. Enforce **vertical slice discipline** (UI ↔ API ↔ Domain ↔ DB with Supabase/Prisma).
+5. **Execute** — small, verifiable diffs. Use `skills/execute-task.md` discipline. Respect modular monolith domain boundaries (`src/modules/`).
 6. **Verify** — check against `context/24_acceptance` criteria and `skills/verify-result.md`.
 7. **Learn** — if a mistake or a reusable decision surfaced, log it (§5). Don't repeat step 3
    discussions for decisions already closed in `logs/decision-log.md`.
@@ -60,3 +58,13 @@ Skip both only for trivial, purely mechanical changes (typo fix, rename, formatt
 The PRD (`context/` files, derived from `YatraSetu_Final_Detailed_PRD.pdf`) is the baseline.
 If the user gives a verbal instruction that conflicts with it, the newer instruction wins —
 but log the change in `logs/decision-log.md` so the PRD and reality don't silently diverge.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

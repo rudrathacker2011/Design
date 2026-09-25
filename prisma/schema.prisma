@@ -1,0 +1,532 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────
+
+enum Role {
+  TRAVELLER
+  LOCAL_OPERATOR
+  TOURISM_ADMIN
+  SYSTEM_ADMIN
+}
+
+enum TravelPace {
+  RELAXED
+  BALANCED
+  FAST
+}
+
+enum CrowdPreference {
+  SEEK_QUIET
+  MODERATE
+  DONT_CARE
+}
+
+enum DecisionOutcome {
+  GO
+  MODIFY
+  ALTERNATIVE
+}
+
+enum TripStatus {
+  PLANNED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  SUSPENDED
+}
+
+enum ProviderCategory {
+  STAY
+  GUIDE
+  VEHICLE_RENTAL
+  MECHANIC
+  RESTAURANT
+  EXPERIENCE
+}
+
+enum AssistanceType {
+  SOS
+  MECHANIC
+  MEDICAL
+  INFO
+}
+
+enum AssistanceStatus {
+  INITIATED
+  DISPATCHED
+  EN_ROUTE
+  RESOLVED
+  CANCELLED
+}
+
+// ─── Core User ────────────────────────────────────────────────
+
+model User {
+  id                String             @id @default(uuid())
+  supabaseUid       String?            @unique
+  email             String             @unique
+  name              String?
+  phone             String?
+  role              Role               @default(TRAVELLER)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  profile           TravellerProfile?
+  emergencyContacts EmergencyContact[]
+  intents           TravellerIntent[]
+  trips             Trip[]
+  recommendations   Recommendation[]
+  reviews           Review[]
+  feedback          Feedback[]
+  yatraPoints       YatraPoint[]
+}
+
+model TravellerProfile {
+  id                  String          @id @default(uuid())
+  userId              String          @unique
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgetMin           Float?
+  budgetMax           Float?
+  travelPace          TravelPace      @default(BALANCED)
+  crowdPreference     CrowdPreference @default(MODERATE)
+  accessibilityNeeds  Boolean         @default(false)
+  transportPreference String?
+  vehicleRequired     Boolean         @default(false)
+  languagePreference  String          @default("en")
+  experienceTags      String[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model EmergencyContact {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String
+  relationship String
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── Intent ───────────────────────────────────────────────────
+
+model TravellerIntent {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripId           String?
+  rawText          String
+  normalizedIntent Json?
+  experienceTags   String[]
+  constraints      Json?
+  createdAt        DateTime @default(now())
+}
+
+// ─── Destination ─────────────────────────────────────────────
+
+model Destination {
+  id                  String                   @id @default(uuid())
+  name                String
+  slug                String                   @unique
+  latitude            Float
+  longitude           Float
+  region              String
+  state               String?
+  country             String                   @default("India")
+  category            String
+  description         String
+  operationalMetadata Json?
+  isActive            Boolean                  @default(true)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  experiences         DestinationExperience[]
+  observations        DestinationObservation[]
+  arrivalPoints       ArrivalPoint[]
+  recommendations     Recommendation[]
+  alternatives        DestinationAlternative[] @relation("AlternativeSource")
+  alternativeFor      DestinationAlternative[] @relation("AlternativeTarget")
+  providers           Provider[]
+  trips               Trip[]
+
+  @@index([latitude, longitude])
+  @@index([region])
+  @@index([state])
+}
+
+model DestinationExperience {
+  id             String      @id @default(uuid())
+  destinationId  String
+  destination    Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  experienceType String
+  weight         Float       @default(1.0)
+  source         String?
+  confidence     Float       @default(1.0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([destinationId])
+}
+
+model DestinationObservation {
+  id            String      @id @default(uuid())
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  signalType    String      // WEATHER|CROWD|OPERATIONS|TRANSPORT|CONNECTIVITY|SAFETY|ACCESSIBILITY|EVENT|ROAD
+  value         Json
+  source        String
+  collectedAt   DateTime    @default(now())
+  expiresAt     DateTime?
+  confidence    Float       @default(1.0)
+  evidenceType  String?     // SENSOR|OFFICIAL|REPORTED|INFERRED
+  locationScope String?
+  createdAt     DateTime    @default(now())
+
+  @@index([destinationId, collectedAt])
+  @@index([destinationId, signalType])
+  @@index([expiresAt])
+}
+
+model DestinationAlternative {
+  id                   String      @id @default(uuid())
+  sourceDestinationId  String
+  targetDestinationId  String
+  source               Destination @relation("AlternativeSource", fields: [sourceDestinationId], references: [id])
+  target               Destination @relation("AlternativeTarget", fields: [targetDestinationId], references: [id])
+  experienceSimilarity Float
+  relationshipType     String?
+  isActive             Boolean     @default(true)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@unique([sourceDestinationId, targetDestinationId])
+}
+
+// ─── Arrival Points ──────────────────────────────────────────
+
+model ArrivalPoint {
+  id                      String      @id @default(uuid())
+  destinationId           String
+  destination             Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  name                    String
+  latitude                Float
+  longitude               Float
+  accessibilityScore      Int         @default(50)
+  walkingMinutesToDest    Int?
+  parkingAvailable        Boolean     @default(false)
+  facilities              String[]    // clean restroom, EV charging, guide desk, etc.
+  distanceToDestinationKm Float?
+  overallRank             Int         @default(0)
+  isActive                Boolean     @default(true)
+  createdAt               DateTime    @default(now())
+
+  @@index([destinationId])
+}
+
+// ─── Decision / Recommendation ───────────────────────────────
+
+model Recommendation {
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  destinationId  String
+  destination    Destination     @relation(fields: [destinationId], references: [id])
+  tripId         String?
+  ruleVersion    String          @default("v1")
+  suitability    Float
+  decision       DecisionOutcome
+  confidence     Float
+  factors        Json
+  reasons        Json
+  inputSnapshot  Json?
+  createdAt      DateTime        @default(now())
+
+  @@index([userId])
+  @@index([destinationId])
+}
+
+// ─── Trip & Itinerary ─────────────────────────────────────────
+
+model Trip {
+  id                    String      @id @default(uuid())
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destinationId         String?
+  destination           Destination? @relation(fields: [destinationId], references: [id])
+  origin                String
+  destinationSummary    String
+  startDate             DateTime
+  endDate               DateTime
+  status                TripStatus  @default(PLANNED)
+  currentItineraryId    String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  itineraries           Itinerary[]
+  assistanceEvents      AssistanceEvent[]
+  offlinePack           OfflinePack?
+
+  @@index([userId, status])
+}
+
+model Itinerary {
+  id          String          @id @default(uuid())
+  tripId      String
+  trip        Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  version     Int             @default(1)
+  isActive    Boolean         @default(true)
+  generatedBy String          @default("SYSTEM") // SYSTEM|AI|USER
+  adaptationTrigger String?
+  adaptationReason  String?
+  parentId    String?         // Reference to previous version
+  createdAt   DateTime        @default(now())
+
+  items       ItineraryItem[]
+  events      ItineraryEvent[]
+
+  @@index([tripId])
+}
+
+model ItineraryItem {
+  id            String    @id @default(uuid())
+  itineraryId   String
+  itinerary     Itinerary @relation(fields: [itineraryId], references: [id], onDelete: Cascade)
+  dayNumber     Int
+  timeSlot      String?
+  title         String
+  description   String?
+  latitude      Float?
+  longitude     Float?
+  durationMins  Int?
+  category      String?   // TRANSPORT|ACTIVITY|STAY|MEAL|REST
+  metadata      Json?
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([itineraryId])
+}
+
+model ItineraryEvent {
+  id           String    @id @default(uuid())
+  itineraryId  String
+  itinerary    Itinerary @relation(fields: [itineraryId], references: [id], onDelete: Cascade)
+  eventType    String    // ADAPTED|CANCELLED|REPLACED|USER_EDIT
+  description  String
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+}
+
+// ─── Providers & Verification ─────────────────────────────────
+
+model Provider {
+  id                 String             @id @default(uuid())
+  destinationId      String?
+  destination        Destination?       @relation(fields: [destinationId], references: [id])
+  name               String
+  category           ProviderCategory
+  latitude           Float?
+  longitude          Float?
+  phone              String?
+  email              String?
+  verificationStatus VerificationStatus @default(PENDING)
+  isActive           Boolean            @default(true)
+  metadata           Json?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  verificationRecords VerificationRecord[]
+  vehicles            Vehicle[]
+  reviews             Review[]
+  serviceRequests     ServiceRequest[]
+
+  @@index([destinationId, category])
+  @@index([latitude, longitude])
+  @@index([verificationStatus])
+}
+
+model VerificationRecord {
+  id          String   @id @default(uuid())
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  status      VerificationStatus
+  evidence    Json?
+  verifiedBy  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([providerId])
+}
+
+model Vehicle {
+  id              String   @id @default(uuid())
+  providerId      String
+  provider        Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  type            String   // BIKE|SCOOTER|SUV|SEDAN|RICKSHAW
+  model           String
+  isAvailable     Boolean  @default(true)
+  dailyRateInr    Float
+  capacity        Int
+  transmission    String   // MANUAL|AUTOMATIC
+  suitableTerrain String[]
+  pickupLocation  String?
+  rating          Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([providerId])
+}
+
+model ServiceRequest {
+  id          String   @id @default(uuid())
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id])
+  userId      String?
+  tripId      String?
+  type        String
+  status      String   @default("PENDING")
+  notes       String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([providerId, status])
+}
+
+// ─── Reviews ──────────────────────────────────────────────────
+
+model Review {
+  id             String    @id @default(uuid())
+  providerId     String
+  provider       Provider  @relation(fields: [providerId], references: [id])
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  tripId         String?
+  rating         Int       // 1–5
+  comment        String
+  isStayVerified Boolean   @default(false)
+  checkInToken   String?
+  auditHash      String?
+  previousHash   String?
+  createdAt      DateTime  @default(now())
+
+  audit          ReviewAudit?
+
+  @@index([providerId])
+  @@index([userId])
+}
+
+model ReviewAudit {
+  id           String   @id @default(uuid())
+  reviewId     String   @unique
+  review       Review   @relation(fields: [reviewId], references: [id])
+  eventType    String
+  actor        String?
+  previousHash String?
+  currentHash  String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+}
+
+// ─── Safety & SOS ─────────────────────────────────────────────
+
+model AssistanceEvent {
+  id                String          @id @default(uuid())
+  tripId            String
+  trip              Trip            @relation(fields: [tripId], references: [id])
+  userId            String?
+  type              AssistanceType
+  status            AssistanceStatus @default(INITIATED)
+  latitude          Float?
+  longitude         Float?
+  lastKnownLocation Json?
+  contactsNotified  Boolean         @default(false)
+  notes             String?
+  isSimulated       Boolean         @default(false) // Explicit demo/real distinction
+  resolvedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([tripId])
+  @@index([userId])
+}
+
+// ─── Offline ──────────────────────────────────────────────────
+
+model OfflinePack {
+  id              String   @id @default(uuid())
+  tripId          String   @unique
+  trip            Trip     @relation(fields: [tripId], references: [id])
+  version         Int      @default(1)
+  status          String   @default("PENDING")
+  lastSyncedAt    DateTime?
+  assetManifest   Json?
+  itineraryData   Json?
+  providerData    Json?
+  emergencyData   Json?
+  mapBounds       Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Feedback ─────────────────────────────────────────────────
+
+model Feedback {
+  id                   String   @id @default(uuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id])
+  tripId               String?
+  recommendationId     String?
+  predictedDecision    String?
+  actualExperience     Json?
+  differenceNotes      String?
+  overallSatisfaction  Int?
+  createdAt            DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── YatraPoints & Audit ──────────────────────────────────────
+
+model YatraPoint {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  points    Int
+  reason    String
+  tripId    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  entity    String
+  entityId  String
+  action    String
+  actorId   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+}
