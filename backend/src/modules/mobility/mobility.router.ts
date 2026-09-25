@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validate } from '../../lib/validation.js';
 import { ok, fail } from '../../lib/response.js';
 import { prisma } from '../../lib/db.js';
+import { geocodingProvider } from '../../services/registry.js';
 
 export const mobilityRouter = Router();
 
@@ -24,10 +25,11 @@ export interface ArrivalPoint {
 
 export interface RouteOption {
   id: string;
-  mode: 'TRAIN' | 'FLIGHT' | 'BUS' | 'TAXI' | 'SELF_DRIVE';
+  mode: 'TAXI' | 'SELF_DRIVE';
   title: string;
   durationHours: number;
-  estimatedCostInr: { min: number; max: number };
+  distanceKm: number;
+  estimatedCostInr: { min: number; max: number } | null;
   comfortLevel: 'HIGH' | 'MEDIUM' | 'ECONOMY';
   frequency: string;
   carbonKg: number;
@@ -48,7 +50,7 @@ const MobilityQuerySchema = z.object({
 
 /**
  * GET /api/v1/mobility/routes
- * Calculates realistic multi-modal travel routes between Indian origin and destination
+ * Calculates keyless OpenStreetMap/OSRM driving routes between Indian origin and destination.
  */
 mobilityRouter.get('/routes', async (req, res) => {
   try {
@@ -58,64 +60,63 @@ mobilityRouter.get('/routes', async (req, res) => {
     }
     const { origin, destination, travelPace, accessibilityNeeds } = parseResult.data;
 
-    if (!process.env.GOOGLE_MAPS_API_KEY) {
-      res.status(503).json(fail('PROVIDER_UNAVAILABLE', 'Live route planning is not configured. Add the maps provider credentials before requesting transport options.', { retryable: true }));
+    const [originPlace] = await geocodingProvider.searchPlaces(origin);
+    const [destinationPlace] = await geocodingProvider.searchPlaces(destination);
+    if (!originPlace || !destinationPlace) {
+      res.status(404).json(fail('NOT_FOUND', 'The free OpenStreetMap geocoder could not resolve the origin or destination.'));
       return;
     }
 
-    // Multi-modal route generator based on Indian travel network
-    const routes: RouteOption[] = [
-      {
-        id: 'route-train-express',
-        mode: 'TRAIN',
-        title: `Vande Bharat / Express Train from ${origin} to ${destination}`,
-        durationHours: 6.5,
-        estimatedCostInr: { min: 850, max: 2100 },
-        comfortLevel: 'HIGH',
-        frequency: '4 daily departures',
-        carbonKg: 28,
-        segments: [
-          { from: `${origin} Junction`, to: `${destination} Terminal`, carrier: 'Indian Railways (IRCTC)', duration: '6 hrs 15 min' },
-          { from: `${destination} Terminal`, to: 'Destination Hub', carrier: 'Smart Transit / Prepaid Auto', duration: '20 min' },
-        ],
-      },
-      {
-        id: 'route-flight-transit',
-        mode: 'FLIGHT',
-        title: `Direct / Connecting Flight to nearest hub`,
-        durationHours: 3.5,
-        estimatedCostInr: { min: 3800, max: 7200 },
-        comfortLevel: accessibilityNeeds ? 'HIGH' : 'MEDIUM',
-        frequency: '6 flights daily',
-        carbonKg: 95,
-        segments: [
-          { from: `${origin} Airport`, to: `${destination} Airport`, carrier: 'Domestic Airlines', duration: '2 hrs 10 min' },
-          { from: `${destination} Airport`, to: 'City Center', carrier: 'Airport Express Shuttle', duration: '45 min' },
-        ],
-      },
-      {
-        id: 'route-bus-sleeper',
-        mode: 'BUS',
-        title: `State / AC Sleeper Bus via National Highway`,
-        durationHours: 9.0,
-        estimatedCostInr: { min: 650, max: 1400 },
-        comfortLevel: 'ECONOMY',
-        frequency: 'Hourly overnight buses',
-        carbonKg: 42,
-        segments: [
-          { from: `${origin} ISBT`, to: `${destination} Bus Stand`, carrier: 'State Road Transport (GSRTC/MSRTC)', duration: '8 hrs 30 min' },
-        ],
-      },
-    ];
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originPlace.longitude},${originPlace.latitude};${destinationPlace.longitude},${destinationPlace.latitude}?overview=false&alternatives=true&steps=false`;
+    const osrmResponse = await fetch(osrmUrl, {
+      headers: { 'User-Agent': 'YatraSetu-Tourism-Intelligence/1.0 (contact@yatrasetu.in)' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!osrmResponse.ok) {
+      res.status(503).json(fail('PROVIDER_UNAVAILABLE', 'OpenStreetMap routing is temporarily unavailable.', { retryable: true }));
+      return;
+    }
+    const osrm = await osrmResponse.json() as {
+      code?: string;
+      routes?: Array<{ distance: number; duration: number }>;
+    };
+    if (osrm.code !== 'Ok' || !osrm.routes?.length) {
+      res.status(503).json(fail('PROVIDER_UNAVAILABLE', 'No drivable route was found by the free routing provider.', { retryable: true }));
+      return;
+    }
+    const routes: RouteOption[] = osrm.routes.slice(0, 2).flatMap((route, index) => {
+      const durationHours = route.duration / 3600;
+      const distanceKm = route.distance / 1000;
+      const segment = {
+        from: originPlace.name,
+        to: destinationPlace.name,
+        carrier: 'OpenStreetMap / OSRM',
+        duration: `${Math.round(route.duration / 60)} min`,
+      };
+      const base = {
+        durationHours,
+        distanceKm,
+        estimatedCostInr: null,
+        frequency: 'Route estimate; availability and fare require a transport operator',
+        carbonKg: Math.round(distanceKm * 0.17 * 10) / 10,
+        segments: [segment],
+      };
+      return [
+        { ...base, id: `osm-self-drive-${index + 1}`, mode: 'SELF_DRIVE' as const, title: `Open route from ${originPlace.name} to ${destinationPlace.name}`, comfortLevel: accessibilityNeeds ? 'MEDIUM' as const : 'HIGH' as const },
+        { ...base, id: `osm-taxi-${index + 1}`, mode: 'TAXI' as const, title: `Taxi route from ${originPlace.name} to ${destinationPlace.name}`, comfortLevel: 'HIGH' as const },
+      ];
+    });
 
     res.json(ok({
       origin,
       destination,
       travelPace: travelPace ?? 'BALANCED',
+      provider: 'OpenStreetMap / OSRM',
       routes,
     }));
-  } catch (err: any) {
-    res.status(500).json(fail('INTERNAL_ERROR', 'Failed to calculate mobility routes.'));
+  } catch (error) {
+    console.error('[Mobility Routes]', error);
+    res.status(503).json(fail('PROVIDER_UNAVAILABLE', 'Free map routing is temporarily unavailable.', { retryable: true }));
   }
 });
 

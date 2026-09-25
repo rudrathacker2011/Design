@@ -83,7 +83,7 @@ app.get('/health/readiness', async (_req, res) => {
     database,
     supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
     ai: Boolean(process.env.GEMINI_API_KEY),
-    maps: Boolean(process.env.GOOGLE_MAPS_API_KEY),
+    routing: true,
   };
   const ready = Object.values(checks).every(Boolean);
   res.status(ready ? 200 : 503).json({

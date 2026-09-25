@@ -66,6 +66,7 @@ Operator acknowledgement and external emergency dispatch integrations are still 
 - Mechanic assistance now creates an authenticated persisted `AssistanceEvent`; the active safety route no longer writes mechanic or SOS records only to browser state.
 - Readiness now performs a real `SELECT 1` database probe, every request receives an `X-Request-ID` correlation header, and structured request logs include method, path, status, and duration.
 - The frontend decision service no longer has a development/demo evaluation fallback; destination decisions must come from the backend decision API.
+- Mobility route planning now uses free Nominatim geocoding and OSRM/OpenStreetMap driving routes, with no Google Maps key required. Fare, train, bus, and flight availability remain explicitly unprovided.
 - The admin page now shows a transparent local readiness monitor and session counters, with a route-level provider boundary so it builds correctly.
 - The trip planner now includes a user-triggered adaptation simulation that adds a new draft suggestion, increments the itinerary version, explains the simulated conflict, and preserves the original items for editing.
 - Rental controls now create an explicitly simulated request reference rather than a fake verified voucher or booking confirmation; the request uses the traveller's entered travel dates.
@@ -82,7 +83,7 @@ Operator acknowledgement and external emergency dispatch integrations are still 
 - Assistance and service requests are persisted in PostgreSQL and visible to authorized operators; external dispatch and provider acknowledgement integrations remain staged.
 - Offline packs persist server-side manifests, but map tiles, live routes, verified emergency contacts, and background synchronization still require provider integrations and a service worker/offline cache strategy.
 - The in-memory rate limiter is suitable for a single backend instance only; production multi-instance deployments must use the configured Redis boundary before scaling horizontally.
-- Provider and deployment secrets remain environment-only and must be configured before readiness can report fully ready.
+- Provider and deployment secrets remain environment-only. Readiness treats the free OSRM routing path as configured; AI remains unavailable until an AI provider key is supplied.
 - Older traceability entries still describe legacy `web/` implementation and must be re-audited against the active root app.
 
 ## Verification
