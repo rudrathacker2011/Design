@@ -16,6 +16,11 @@ This guide is for the design team to:
 
 ## 🗂️ Project Structure at a Glance
 
+> **Active implementation note (2026-09-25):** The root Next.js application under `../src/`
+> is now the active UI. The `web/` tree is legacy reference/recovery material. New design
+> work must target the root routes, components, `src/app/globals.css`, and
+> `src/app/tokens.css`; do not add new UI to the legacy Vite paths.
+
 ```
 web/
 ├── src/

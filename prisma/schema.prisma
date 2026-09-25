@@ -272,6 +272,7 @@ model Trip {
   destination           Destination? @relation(fields: [destinationId], references: [id])
   origin                String
   destinationSummary    String
+  planningPreferences   Json?
   startDate             DateTime
   endDate               DateTime
   status                TripStatus  @default(PLANNED)

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/auth/browser';
-import { runtimeConfig } from '@/lib/config/runtime';
 import { useAuth } from '@/modules/auth/AuthProvider';
 
 export default function LoginPage() {
@@ -37,12 +36,7 @@ export default function LoginPage() {
         router.push('/dashboard');
         return;
       }
-      if (runtimeConfig.mode === 'production') throw new Error('Production authentication is not configured. Add the Supabase browser variables before signing in.');
-      const raw = window.localStorage.getItem('yatrasetu-demo-account');
-      const account = raw ? JSON.parse(raw) as { email?: string } : null;
-      if (!account || account.email !== email.trim().toLowerCase()) throw new Error('No matching local demo account found. Create one first.');
-      window.localStorage.setItem('yatrasetu-demo-session', JSON.stringify({ email: account.email, signedInAt: new Date().toISOString() }));
-      router.push('/dashboard');
+      throw new Error('Production authentication is not configured. Add the Supabase browser variables before signing in.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to sign in.');
     } finally {
@@ -71,17 +65,17 @@ export default function LoginPage() {
   };
 
   return <main className="ys-form-page">
-    <p className="ys-eyebrow">Account · {configured ? 'Supabase Auth' : 'local demo'}</p>
+    <p className="ys-eyebrow">Account · Supabase Auth</p>
     <h1>Return to your traveller workspace</h1>
-    <p className="ys-form-intro">{configured ? 'Sign in with your password or request a one-time magic link.' : runtimeConfig.mode === 'production' ? 'Production authentication is unavailable until Supabase is configured.' : 'This browser is running demo mode. Configure Supabase to enable production authentication.'}</p>
+    <p className="ys-form-intro">{configured ? 'Sign in with your password or request a one-time magic link.' : 'Production authentication is unavailable until Supabase is configured.'}</p>
     <form onSubmit={submit}>
       <label className="ys-field ys-field-wide"><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
       {configured && <label className="ys-field ys-field-wide"><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>}
-      <div className="ys-form-actions"><span>{configured ? 'Your session is securely stored by Supabase.' : 'No password is collected in demo mode.'}</span><button className="ys-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Continue to workspace'}</button></div>
+      <div className="ys-form-actions"><span>{configured ? 'Your session is securely stored by Supabase.' : 'Supabase configuration is required.'}</span><button className="ys-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Continue to workspace'}</button></div>
     </form>
     {configured && <button className="ys-secondary-button ys-auth-link-button" type="button" onClick={sendMagicLink} disabled={busy}>Email me a magic link</button>}
     {message && <p className="ys-form-footnote" role="status">{message}</p>}
     {error && <p className="ys-form-footnote ys-form-error" role="alert">{error}</p>}
-    <p className="ys-form-footnote">{runtimeConfig.mode === 'demo' ? <>New here? <Link href="/register">Create a demo workspace</Link></> : <>Need an account? <Link href="/register">Create one</Link></>}</p>
+    <p className="ys-form-footnote">Need an account? <Link href="/register">Create one</Link></p>
   </main>;
 }

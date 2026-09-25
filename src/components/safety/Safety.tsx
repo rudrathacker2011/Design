@@ -1,8 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useApp } from '@/modules/profile/app-context';
-import { safetyService, type OfflineTripPack } from '@/modules/safety/safety.service';
+import { useAuth } from '@/modules/auth/AuthProvider';
+import { apiClient } from '@/lib/api/client';
+import type { OfflineTripPack } from '@/modules/safety/safety.service';
 import { SEED_DESTINATIONS } from '@/modules/destination/seed';
 import { 
   ShieldAlert, 
@@ -27,8 +29,8 @@ export default function Safety() {
     profile,
     isSosActive,
     setIsSosActive,
-    recordSupportRequest,
   } = useApp();
+  const { session } = useAuth();
   const activeDestination = SEED_DESTINATIONS.find((destination) => destination.id === tripPlan?.destinationId) ?? selectedDestination;
 
   const [sosResult, setSosResult] = useState<{
@@ -46,7 +48,6 @@ export default function Safety() {
   const [mechanicRequests, setMechanicRequests] = useState<Record<string, string>>({});
   const [showSosConfirmation, setShowSosConfirmation] = useState(false);
   const [sosConsent, setSosConsent] = useState(false);
-  const mechanicSequence = useRef(0);
 
   const offlinePack: OfflineTripPack | null = offlinePacks[activeDestination.id] ?? null;
   const isOfflineSaved = offlinePack !== null;
@@ -54,17 +55,31 @@ export default function Safety() {
 
   const handleTriggerSOS = async () => {
     if (!sosConsent) return;
-    const res = await safetyService.triggerSOS(activeDestination.id);
-    setSosResult(res);
-    recordSupportRequest({
-      id: res.incidentId,
-      reference: res.incidentId,
-      kind: 'sos',
-      destinationId: activeDestination.id,
-      destinationName: activeDestination.name,
-      detail: 'Local SOS simulation; no service or contact was notified.',
-      status: 'recorded',
-      createdAt: new Date().toISOString(),
+    if (!session?.access_token) return;
+    let coordinates = activeDestination.coordinates;
+    if ('geolocation' in navigator) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 }));
+        coordinates = { lat: position.coords.latitude, lng: position.coords.longitude };
+      } catch {
+        // The server records the destination coordinates only when device location permission is unavailable.
+      }
+    }
+    const res = await apiClient.dispatchAssistance({
+      type: 'SOS',
+      latitude: coordinates.lat,
+      longitude: coordinates.lng,
+      locationName: activeDestination.name,
+      notes: 'Emergency assistance requested from YatraSetu.',
+    }, session.access_token);
+    setSosResult({
+      status: res.status,
+      incidentId: res.id,
+      timestamp: res.createdAt,
+      locationShared: `${res.coordinates.latitude.toFixed(4)}, ${res.coordinates.longitude.toFixed(4)}`,
+      simulatedSteps: [res.message],
+      nearestHospital: { name: 'Not provided by configured assistance service', distanceKm: 0, phone: 'Use verified local emergency channels' },
+      nearestPolice: { station: 'Not provided by configured assistance service', distanceKm: 0, phone: 'Use verified local emergency channels' },
     });
     setIsSosActive(true);
     setShowSosConfirmation(false);
@@ -72,33 +87,36 @@ export default function Safety() {
   };
 
   const handleDownloadPack = async () => {
+    if (!session?.access_token) return;
     setIsDownloading(true);
-    const sameTrip = tripPlan?.destinationId === activeDestination.id ? tripPlan : undefined;
-    const pack = await safetyService.downloadOfflinePack(activeDestination.id, sameTrip, {
-      name: profile.emergencyContactName,
-      phone: profile.emergencyContactPhone,
-      relationship: profile.emergencyContactRelationship,
-    });
-    saveOfflinePack(activeDestination.id, pack);
-    setIsDownloading(false);
+    try {
+      const savedTrip = await apiClient.getTrip(session.access_token);
+      if (!savedTrip) throw new Error('Create and save a trip before downloading an offline pack.');
+      const pack = await apiClient.createOfflinePack({
+        tripId: savedTrip.id,
+        emergencyData: {
+          name: profile.emergencyContactName,
+          phone: profile.emergencyContactPhone,
+          relationship: profile.emergencyContactRelationship,
+        },
+      }, session.access_token);
+      saveOfflinePack(activeDestination.id, pack as OfflineTripPack);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
-  const handleRequestMechanic = (mechId: string) => {
-    if (!mechanicConsent) return;
-    mechanicSequence.current += 1;
-    const reference = `DEMO-MECH-${mechId.toUpperCase()}-${String(mechanicSequence.current).padStart(3, '0')}`;
-    setMechanicRequests((previous) => ({ ...previous, [mechId]: reference }));
+  const handleRequestMechanic = async (mechId: string) => {
+    if (!mechanicConsent || !session?.access_token) return;
     const mechanic = activeDestination.mechanics.find((item) => item.id === mechId);
-    recordSupportRequest({
-      id: reference,
-      reference,
-      kind: 'mechanic',
-      destinationId: activeDestination.id,
-      destinationName: activeDestination.name,
-      detail: `${mechanic?.name ?? 'Demo mechanic'} · no shop contacted`,
-      status: 'recorded',
-      createdAt: new Date().toISOString(),
-    });
+    const res = await apiClient.dispatchAssistance({
+      type: 'MECHANIC',
+      latitude: activeDestination.coordinates.lat,
+      longitude: activeDestination.coordinates.lng,
+      locationName: activeDestination.name,
+      notes: `Roadside assistance requested for ${mechanic?.name ?? 'a nearby provider'}.`,
+    }, session.access_token);
+    setMechanicRequests((previous) => ({ ...previous, [mechId]: res.id }));
   };
 
   return (
@@ -108,30 +126,30 @@ export default function Safety() {
         <div>
           <div className="badge-row">
             <span className="pill-badge pill-red">
-              <ShieldAlert size={14} /> Resilience demo
+            <ShieldAlert size={14} /> Safety and assistance
             </span>
             <span className="pill-badge pill-purple">
-              Demo destination: {activeDestination.region}
+              Destination: {activeDestination.region}
             </span>
           </div>
           <h2>Safety Indicator, SOS & Remote Assistance</h2>
           <p className="subtitle">
-            Illustrative risk factors and local demo flows. No emergency response or live connectivity data is connected.
+            Safety signals and assistance availability depend on current provider integrations and permissions.
           </p>
         </div>
 
         <button className="btn-trigger-sos" onClick={() => setShowSosConfirmation(true)}>
           <PhoneCall size={18} />
-          <span>One-Tap SOS Simulation</span>
+          <span>Request assistance</span>
         </button>
       </div>
 
       {showSosConfirmation && (
         <section className="safety-consent-card glass-panel" role="alertdialog" aria-modal="true" aria-labelledby="sos-consent-title">
-          <h3 id="sos-consent-title">Run the SOS demo simulation?</h3>
-          <p>This creates a local example record only. It uses the selected destination’s fixture coordinates, does not read your device location, and will not contact emergency services or anyone in your contacts. If this is a real emergency, use locally verified emergency channels.</p>
-          <label><input type="checkbox" checked={sosConsent} onChange={(event) => setSosConsent(event.target.checked)} /> I understand this is a simulation and no help will be dispatched.</label>
-          <div><button type="button" className="btn-cancel-sos" onClick={() => { setShowSosConfirmation(false); setSosConsent(false); }}>Cancel</button><button type="button" className="btn-trigger-sos" disabled={!sosConsent} onClick={() => void handleTriggerSOS()}>Run simulation</button></div>
+          <h3 id="sos-consent-title">Confirm assistance request</h3>
+          <p>This records an authenticated assistance event for the active trip. Device location is requested when permitted. No emergency service is contacted unless a configured operator or emergency integration acknowledges it.</p>
+          <label><input type="checkbox" checked={sosConsent} onChange={(event) => setSosConsent(event.target.checked)} /> I understand this records a request and does not guarantee dispatch.</label>
+          <div><button type="button" className="btn-cancel-sos" onClick={() => { setShowSosConfirmation(false); setSosConsent(false); }}>Cancel</button><button type="button" className="btn-trigger-sos" disabled={!sosConsent} onClick={() => void handleTriggerSOS()}>Request assistance</button></div>
         </section>
       )}
 
@@ -141,23 +159,23 @@ export default function Safety() {
           <div className="sos-banner-head">
             <div className="pulse-red"></div>
             <div>
-              <h3>SOS FLOW SIMULATED - NO SERVICES CONTACTED</h3>
-              <p>Local demo reference: <strong>{sosResult.incidentId}</strong> · {sosResult.timestamp}</p>
+              <h3>ASSISTANCE REQUEST RECORDED</h3>
+              <p>Reference: <strong>{sosResult.incidentId}</strong> · {sosResult.timestamp}</p>
             </div>
           </div>
 
           <div className="sos-grid">
             <div className="sos-box">
-              <span className="sos-sub">Destination fixture coordinates - not device GPS</span>
+              <span className="sos-sub">Coordinates submitted to the backend</span>
               <strong>{sosResult.locationShared}</strong>
             </div>
             <div className="sos-box">
-              <span className="sos-sub">Unverified medical-support fixture</span>
+              <span className="sos-sub">Medical support</span>
               <strong>{sosResult.nearestHospital.name} ({sosResult.nearestHospital.distanceKm} km)</strong>
               <small>Dial: {sosResult.nearestHospital.phone}</small>
             </div>
             <div className="sos-box">
-              <span className="sos-sub">Unverified local-support fixture</span>
+              <span className="sos-sub">Local assistance</span>
               <strong>{sosResult.nearestPolice.station} ({sosResult.nearestPolice.distanceKm} km)</strong>
               <small>Dial: {sosResult.nearestPolice.phone}</small>
             </div>
@@ -270,10 +288,10 @@ export default function Safety() {
               <Wrench size={20} className="text-amber" />
             </div>
             <p className="mech-intro">
-              Example repair listings only. A demo request is stored in this page; no mechanic is contacted.
+              Provider directory entries are informational. This records an authenticated roadside assistance request for operator acknowledgement.
             </p>
 
-            <label className="safety-consent-inline"><input type="checkbox" checked={mechanicConsent} onChange={(event) => setMechanicConsent(event.target.checked)} /> I understand this is a demo request and no shop will be contacted.</label>
+            <label className="safety-consent-inline"><input type="checkbox" checked={mechanicConsent} onChange={(event) => setMechanicConsent(event.target.checked)} /> I understand this records a request and does not guarantee provider dispatch.</label>
 
             <div className="mechanics-list">
               {activeDestination.mechanics.map((mech) => (
@@ -295,7 +313,7 @@ export default function Safety() {
                     <span className="mech-fee">Est. Callout: ₹{mech.estimatedChargeInr}</span>
                     {mechanicRequests[mech.id] ? (
                       <span className="btn-requested">
-                        <CheckCircle2 size={14} /> Demo request · {mechanicRequests[mech.id]} · no dispatch
+                        <CheckCircle2 size={14} /> Request recorded · {mechanicRequests[mech.id]}
                       </span>
                     ) : (
                       <button 
@@ -304,7 +322,7 @@ export default function Safety() {
                         onClick={() => handleRequestMechanic(mech.id)}
                       >
                         <Wrench size={14} />
-                        <span>Record demo request</span>
+                        <span>Request roadside assistance</span>
                       </button>
                     )}
                   </div>

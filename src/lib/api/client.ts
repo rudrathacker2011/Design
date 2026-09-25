@@ -66,6 +66,56 @@ export const apiClient = {
     return request<TravellerProfileResponse>('/profile', {}, token);
   },
 
+  async getTrip(token: string) {
+    return request<ProductionTrip | null>('/trips', {}, token);
+  },
+
+  async createTrip(data: ProductionTripInput, token: string) {
+    return request<ProductionTrip>('/trips', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, token);
+  },
+
+  async updateTrip(tripId: string, data: ProductionTripInput, token: string) {
+    return request<ProductionTrip>(`/trips/${encodeURIComponent(tripId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }, token);
+  },
+
+  async submitFeedback(data: {
+    tripId?: string;
+    destinationId: string;
+    outcome: 'better' | 'as-expected' | 'worse' | 'not-travelled';
+    actualCrowd: 'quiet' | 'moderate' | 'busy' | 'unknown';
+    actualWeather: 'good' | 'mixed' | 'poor' | 'unknown';
+    note: string;
+  }, token: string) {
+    return request<{ id: string; pointsAwarded: number; createdAt: string }>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, token);
+  },
+
+  async getOperatorRequests(token: string) {
+    return request<OperatorRequest[]>('/operator/requests', {}, token);
+  },
+
+  async updateOperatorRequest(requestId: string, status: OperatorRequest['status'], token: string) {
+    return request<{ id: string; status: string; resolvedAt: string | null }>(`/operator/requests/${encodeURIComponent(requestId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }, token);
+  },
+
+  async createOfflinePack(data: { tripId: string; emergencyData?: { name: string; phone: string; relationship: string } }, token: string) {
+    return request<OfflinePackResponse>('/offline/packs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, token);
+  },
+
   async updateProfile(data: UpdateProfileInput, token: string) {
     return request<TravellerProfileResponse>('/profile', {
       method: 'PUT',
@@ -124,20 +174,23 @@ export const apiClient = {
   },
 
   // ── Trust & Verification ─────────────────────────────────
-  async getVerifiedProviders(category?: string) {
-    const q = category ? `?category=${category}` : '';
-    return request<any[]>(`/trust/providers${q}`);
+  async getVerifiedProviders(category?: string, destination?: string) {
+    const query = new URLSearchParams();
+    if (category) query.set('category', category);
+    if (destination) query.set('destination', destination);
+    const q = query.toString() ? `?${query.toString()}` : '';
+    return request<VerifiedProvider[]>(`/trust/providers${q}`);
   },
 
   async submitVerifiedReview(data: {
-    providerId?: string;
-    destinationId?: string;
+    providerId: string;
+    destinationId: string;
     rating: number;
     title: string;
     body: string;
     checkInProofCode: string;
-  }, token?: string) {
-    return request<any>('/trust/reviews', {
+  }, token: string) {
+    return request<{ id: string; verified: boolean; cryptographicHash: string; createdAt: string; pointsAwarded: number }>('/trust/reviews', {
       method: 'POST',
       body: JSON.stringify(data),
     }, token);
@@ -151,6 +204,10 @@ export const apiClient = {
 
   async getGovDispersal() {
     return request<any>('/gov/dispersal');
+  },
+
+  async getGovMonitor(token: string) {
+    return request<GovMonitorResponse>('/gov/monitor', {}, token);
   },
 };
 
@@ -180,6 +237,94 @@ export interface UpdateProfileInput {
   vehicleRequired?: boolean;
   languagePreference?: string;
   experienceTags?: string[];
+}
+
+export interface ProductionTripItem {
+  id: string;
+  day: number;
+  time: string;
+  title: string;
+  notes: string;
+}
+
+export interface ProductionTripInput {
+  destinationId: string;
+  origin: string;
+  travelDates: { start: string; end: string };
+  partySize: number;
+  pace: 'RELAXED' | 'BALANCED' | 'FAST';
+  budget: 'VALUE' | 'COMFORTABLE' | 'FLEXIBLE';
+  transportPreference: string;
+  items: ProductionTripItem[];
+}
+
+export interface ProductionTrip extends ProductionTripInput {
+  id: string;
+  destinationName: string;
+  version: number;
+  adaptationCount: number;
+  updatedAt: string;
+}
+
+export interface VerifiedProvider {
+  id: string;
+  name: string;
+  category: string;
+  verificationStatus: string;
+  destinationId?: string | null;
+  reviews?: Array<{ id: string; rating: number; comment: string; createdAt: string }>;
+}
+
+export interface OperatorRequest {
+  id: string;
+  reference: string;
+  kind: string;
+  status: string;
+  detail: string;
+  destination: string | null;
+  createdAt: string;
+  source: 'assistance' | 'service';
+}
+
+export interface GovMonitorResponse {
+  generatedAt: string;
+  counts: {
+    users: number;
+    activeTrips: number;
+    openAssistance: number;
+    openServices: number;
+    verifiedProviders: number;
+    feedback: number;
+  };
+  observations: Array<{
+    id: string;
+    destinationId: string;
+    destinationName: string;
+    signalType: string;
+    value: unknown;
+    source: string;
+    confidence: number;
+    collectedAt: string;
+    expiresAt: string | null;
+  }>;
+  providerConfiguration: Record<string, boolean>;
+}
+
+export interface OfflinePackResponse {
+  id: string;
+  tripId: string;
+  destinationName: string;
+  downloadedAt: string;
+  lastSyncedAt: string;
+  itinerary: { day: number; time: string; title: string; notes: string }[];
+  offlineCoordinates: { lat: number; lng: number };
+  mapDataNote: string;
+  realityLastSynced: string | null;
+  emergencyContacts: Array<{ role: string; name: string; phone: string; availability: string; isVerifiedGov: boolean }>;
+  offlineMechanics: never[];
+  survivalNotes: string[];
+  safeNodes: string[];
+  sizeKb: null;
 }
 
 export interface DecisionEvaluateInput {

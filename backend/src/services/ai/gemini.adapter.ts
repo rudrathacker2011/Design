@@ -5,7 +5,6 @@
 //   Set GEMINI_API_KEY in backend/.env
 //   Get key at: https://aistudio.google.com/app/apikey
 //
-// If key is absent, falls back to DemoAIAdapter (deterministic tag extraction).
 // Replace this adapter with OpenAI by implementing AIProvider interface.
 // ============================================================
 import type { AIProvider, ExtractedIntent } from '../providers.interface.js';
@@ -21,7 +20,7 @@ export class GeminiAIAdapter implements AIProvider {
 
   private async call(prompt: string): Promise<string> {
     if (!this.apiKey) {
-      throw new Error('GEMINI_API_KEY not set — falling back to demo provider.');
+      throw new Error('AI_PROVIDER_NOT_CONFIGURED: GEMINI_API_KEY is required.');
     }
     const url = `${this.BASE_URL}/${this.MODEL}:generateContent?key=${this.apiKey}`;
     const res = await fetch(url, {
@@ -81,74 +80,5 @@ Return ONLY a single decimal number between 0.0 and 1.0. Nothing else.`;
     const result = await this.call(prompt);
     const score = parseFloat(result.trim());
     return isNaN(score) ? 0.5 : Math.max(0, Math.min(1, score));
-  }
-}
-
-// ── Demo / Fallback AI Adapter (deterministic, no key needed) ──
-export class DemoAIAdapter implements AIProvider {
-  private readonly EXPERIENCE_CATEGORIES = [
-    'heritage', 'architecture', 'photography', 'nature', 'wildlife',
-    'adventure', 'trek', 'beach', 'coastal', 'art', 'craft', 'culture',
-    'spiritual', 'temple', 'fort', 'palace', 'mountain', 'forest',
-    'desert', 'lake', 'river', 'food', 'local', 'village', 'peaceful',
-    'offbeat', 'pilgrimage', 'yoga', 'wellness',
-  ];
-
-  async extractIntent(rawText: string): Promise<ExtractedIntent> {
-    const lower = rawText.toLowerCase();
-    const experienceTags = this.EXPERIENCE_CATEGORIES.filter(tag => lower.includes(tag));
-    if (experienceTags.length === 0) experienceTags.push('culture', 'nature');
-
-    const impliedConstraints: string[] = [];
-    if (lower.includes('quiet') || lower.includes('peaceful') || lower.includes('offbeat')) impliedConstraints.push('minimal crowds');
-    if (lower.includes('wheelchair') || lower.includes('accessible') || lower.includes('disability')) impliedConstraints.push('accessibility required');
-    if (lower.includes('budget')) impliedConstraints.push('budget-conscious');
-
-    const budgetSignal =
-      lower.includes('luxury') || lower.includes('premium') ? 'luxury' :
-      lower.includes('budget') || lower.includes('cheap') ? 'budget' : 'mid';
-
-    return {
-      experienceTags,
-      impliedConstraints,
-      travelStyle: impliedConstraints.includes('minimal crowds') ? 'slow and immersive' : 'balanced explorer',
-      budgetSignal,
-      naturalLanguageSummary: `Traveller seeking ${experienceTags.slice(0, 3).join(', ')} experiences in India.`,
-    };
-  }
-
-  async generateExplanation(context: Record<string, unknown>): Promise<string> {
-    const decision = context.decision as string;
-    const dest = context.destinationName as string;
-    if (decision === 'GO') return `Based on current conditions, ${dest} is well-suited to your travel preferences. All key requirements are met and the environment is conducive to your intended experience.`;
-    if (decision === 'MODIFY') return `${dest} is still a viable option but current conditions suggest adjusting your timing or activities for the best experience.`;
-    return `Based on current conditions and your profile, we recommend exploring an experience-equivalent alternative to ${dest} that better matches your requirements right now.`;
-  }
-
-  async draftItinerary(context: Record<string, unknown>): Promise<string> {
-    const days = (context.days as number) ?? 3;
-    const dest = context.destination as string;
-    const itinerary = [];
-    for (let d = 1; d <= days; d++) {
-      itinerary.push({
-        day: d,
-        title: d === 1 ? `Arrival & Orientation at ${dest}` : d === days ? `Final Exploration & Departure` : `Exploration Day ${d}`,
-        activities: [
-          { time: '9:00 AM', activity: d === 1 ? 'Check into accommodation & local orientation' : 'Morning sightseeing at key attraction', duration: '2h', notes: 'Follow local guide recommendations' },
-          { time: '12:00 PM', activity: 'Local cuisine lunch at verified eatery', duration: '1h', notes: 'Try regional specialties' },
-          { time: '2:00 PM', activity: 'Afternoon cultural or nature experience', duration: '3h', notes: 'Best experienced with local guide' },
-          { time: '6:00 PM', activity: 'Sunset viewpoint or market visit', duration: '1.5h', notes: 'Carry offline maps' },
-        ],
-      });
-    }
-    return JSON.stringify(itinerary);
-  }
-
-  async computeExperienceSimilarity(intentTags: string[], destinationTags: string[]): Promise<number> {
-    const intentSet = new Set(intentTags.map(t => t.toLowerCase()));
-    const destSet = new Set(destinationTags.map(t => t.toLowerCase()));
-    const intersection = [...intentSet].filter(t => destSet.has(t)).length;
-    const union = new Set([...intentSet, ...destSet]).size;
-    return union === 0 ? 0.5 : intersection / union;
   }
 }

@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useApp } from '@/modules/profile/app-context';
 import { useAuth } from '@/modules/auth/AuthProvider';
 import { apiClient } from '@/lib/api/client';
-import { runtimeConfig } from '@/lib/config/runtime';
 
 export default function ProfilePage() {
   const { profile, setProfile } = useApp();
@@ -45,7 +44,7 @@ export default function ProfilePage() {
       <div className="ys-profile-contact">
         <p className="ys-eyebrow">OPTIONAL · OFFLINE PREPARATION</p>
         <h2>Emergency contact for your offline pack</h2>
-        <p>Stored only in this browser demo. YatraSetu does not verify or notify this person.</p>
+        <p>Stored with your traveller profile. YatraSetu does not verify or notify this person.</p>
         <div className="ys-form-grid">
           <label className="ys-field"><span>Contact name</span><input value={profile.emergencyContactName} maxLength={80} onChange={(e) => setProfile({ ...profile, emergencyContactName: e.target.value })} /></label>
           <label className="ys-field"><span>Phone number</span><input type="tel" value={profile.emergencyContactPhone} maxLength={32} onChange={(e) => setProfile({ ...profile, emergencyContactPhone: e.target.value })} /></label>
@@ -53,7 +52,7 @@ export default function ProfilePage() {
         </div>
       </div>
       <div className="ys-form-actions">
-        <span>{runtimeConfig.mode === 'demo' ? 'Saved in this browser for your demo session.' : saveState === 'saved' ? 'Saved to your traveller account.' : saveState === 'error' ? 'Could not save to the server. Check your connection and try again.' : 'Save your profile before continuing.'}</span>
+        <span>{saveState === 'saved' ? 'Saved to your traveller account.' : saveState === 'error' ? 'Could not save to the server. Check your connection and try again.' : 'Save your profile before continuing.'}</span>
         <div>
           {session && <button className="ys-secondary-button" type="button" onClick={saveProfile} disabled={saveState === 'saving'}>{saveState === 'saving' ? 'Saving…' : 'Save profile'}</button>}
           <Link href="/intent" className="ys-button">Continue to travel intent</Link>

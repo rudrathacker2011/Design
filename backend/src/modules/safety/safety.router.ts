@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../lib/validation.js';
 import { ok, fail } from '../../lib/response.js';
-import { optionalAuth } from '../../lib/auth.js';
+import { requireAuth } from '../../lib/auth.js';
 import { prisma } from '../../lib/db.js';
 
 export const safetyRouter = Router();
@@ -21,50 +21,36 @@ const AssistanceRequestSchema = z.object({
  * POST /api/v1/safety/assistance
  * Dispatches an emergency assistance event (SOS / Mechanic / Medical)
  */
-safetyRouter.post('/assistance', optionalAuth, validate(AssistanceRequestSchema), async (req, res) => {
+safetyRouter.post('/assistance', requireAuth, validate(AssistanceRequestSchema), async (req, res) => {
   try {
     const { type, latitude, longitude, locationName, batteryLevel, networkSignal, notes } = req.body;
 
-    const dispatchTime = new Date().toISOString();
-    const etaMinutes = type === 'SOS' ? 12 : 25;
-    const responderAgency = type === 'SOS' ? 'Dial 112 Emergency Operations Center' : 'YatraSetu On-Call Mobility Fleet';
-
-    // If trip exists, log to Prisma
-    let eventId = `dispatch-${Date.now()}`;
-    try {
-      const activeTrip = req.userId ? await prisma.trip.findFirst({
-        where: { userId: req.userId, status: 'ACTIVE' },
-      }) : null;
-
-      if (activeTrip) {
-        const event = await prisma.assistanceEvent.create({
-          data: {
-            tripId: activeTrip.id,
-            userId: req.userId ?? null,
-            type: type as any,
-            status: 'DISPATCHED',
-            latitude,
-            longitude,
-            lastKnownLocation: { locationName, batteryLevel, networkSignal },
-            notes: notes ?? 'Assistance requested via YatraSetu App',
-            isSimulated: false,
-          },
-        });
-        eventId = event.id;
-      }
-    } catch {
-      // Graceful fallback if database connection or schema migration pending
+    const activeTrip = await prisma.trip.findFirst({ where: { userId: req.userId!, status: { in: ['ACTIVE', 'PLANNED'] } } });
+    if (!activeTrip) {
+      res.status(409).json(fail('CONFLICT', 'Create or activate a trip before requesting assistance.'));
+      return;
     }
+    const event = await prisma.assistanceEvent.create({
+      data: {
+        tripId: activeTrip.id,
+        userId: req.userId!,
+        type,
+        status: 'INITIATED',
+        latitude,
+        longitude,
+        lastKnownLocation: { locationName, batteryLevel, networkSignal },
+        notes: notes ?? 'Assistance requested via YatraSetu.',
+        isSimulated: false,
+      },
+    });
 
     res.json(ok({
-      id: eventId,
-      status: 'DISPATCHED',
+      id: event.id,
+      status: event.status,
       type,
-      dispatchedAt: dispatchTime,
-      etaMinutes,
-      responderAgency,
+      createdAt: event.createdAt.toISOString(),
       coordinates: { latitude, longitude },
-      message: 'Emergency assistance request logged and dispatched to nearest responder unit.',
+      message: 'Assistance request securely recorded. A configured operator or emergency integration must acknowledge it.',
     }));
   } catch (err: any) {
     console.error('[safety:assistance]', err);

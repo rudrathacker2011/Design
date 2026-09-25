@@ -4,8 +4,12 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: #f6f4ee; color: #20251f; font-family: system-ui, sans-serif; }
 
-.ys-shell { min-height: 100vh; display: grid; grid-template-columns: 252px minmax(0, 1fr); background: #f6f4ee; color: #20251f; }
-.ys-sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 26px 18px; background: #fbfaf6; border-right: 1px solid #e5e2d9; }
+.ys-shell { min-height: 100vh; background: #fff; color: var(--text-primary); }
+.ys-app-header { position: sticky; z-index: 10; top: 0; display: flex; align-items: center; gap: 28px; min-height: 72px; padding: 0 32px; border-bottom: 1px solid #e5e8eb; background: rgba(255,255,255,.96); }
+.ys-app-header .ys-brand { padding: 0; }.ys-app-header .ys-brand-mark { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-saffron); }.ys-app-header .ys-brand-name { color: var(--text-primary); }
+.ys-app-header .ys-nav { display: flex; flex: 1; flex-direction: row; gap: 4px; }.ys-app-header .ys-nav a { min-height: 38px; color: var(--text-secondary); }.ys-app-header .ys-nav a:hover, .ys-app-header .ys-nav a[aria-current='page'] { background: var(--bg-hover); color: var(--accent-indigo); }
+.ys-app-actions { display: flex; align-items: center; gap: 10px; }.ys-user-label { max-width: 180px; overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.ys-header-button { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-pill); background: #fff; color: var(--text-secondary); font-size: 12px; font-weight: 700; }.ys-header-button:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.ys-sidebar { display: none; }
 .ys-brand { display: flex; align-items: center; gap: 11px; padding: 4px 10px 28px; color: #24352d; text-decoration: none; }
 .ys-brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: #e5a13d; color: #fff; font-weight: 800; }
 .ys-brand-name { font-size: 18px; font-weight: 750; letter-spacing: -.04em; }
@@ -20,7 +24,7 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: #f6f4ee; colo
 .ys-mode-badge { display: inline-flex; align-items: center; min-height: 26px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
 .ys-mode-badge-demo { background: #f7f0df; color: #76551e; }
 .ys-mode-badge-production { background: #e9eee7; color: #315b45; }
-.ys-main { min-width: 0; padding: 30px clamp(20px, 4vw, 58px) 60px; }
+.ys-main { min-width: 0; padding: 0 clamp(20px, 4vw, 58px) 60px; }
 .ys-topbar { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto 30px; color: #74796f; font-size: 12px; }
 .ys-stage { max-width: 1200px; margin: 0 auto; }
 .ys-page { max-width: 900px; padding: 38px; border: 1px solid #e6e2d8; border-radius: 18px; background: #fffdf8; box-shadow: 0 10px 35px #3443300a; }
@@ -28,7 +32,49 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: #f6f4ee; colo
 .ys-page h1 { margin: 0; color: #23372d; font-family: Georgia, serif; font-size: clamp(32px, 4vw, 50px); font-weight: 500; letter-spacing: -.04em; }
 .ys-page p { color: #626a62; line-height: 1.7; }
 .ys-page a, .ys-button { display: inline-flex; align-items: center; min-height: 42px; margin-top: 16px; padding: 0 16px; border: 0; border-radius: 9px; background: #315b45; color: white; font-size: 13px; font-weight: 700; text-decoration: none; }
-.ys-landing { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); align-items: center; gap: 8vw; padding: 7vw 10vw; background: #f6f4ee; color: #25372e; }
+.ys-public { min-height: 100vh; background: #fff; color: var(--text-primary); }
+.ys-public-nav { display: flex; align-items: center; justify-content: space-between; max-width: 1280px; margin: 0 auto; padding: 20px 32px; }
+.ys-public-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 24px; font-weight: 700; letter-spacing: -.04em; text-decoration: none; }
+.ys-public-brand .ys-brand-mark { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-saffron); }
+.ys-public-nav nav { display: flex; align-items: center; gap: 24px; }
+.ys-public-nav nav a { color: var(--text-primary); font-size: 14px; font-weight: 600; text-decoration: none; transition: color .2s ease-in-out, background-color .2s ease-in-out; }
+.ys-public-nav nav a:hover { color: var(--accent-indigo); }
+.ys-public-signup { padding: 12px 20px; border-radius: var(--radius-pill); background: var(--accent-saffron); color: #fff !important; }
+.ys-public-signup:hover { background: #de503a !important; }
+.ys-public-hero { max-width: 900px; margin: 0 auto; padding: 150px 32px 80px; text-align: center; }
+.ys-public-hero h1 { max-width: 900px; margin: 0 auto 24px; color: var(--text-primary); font-size: clamp(44px, 7vw, 76px); font-weight: 700; letter-spacing: -.055em; line-height: 1.05; }
+.ys-public-hero > p:not(.ys-eyebrow) { max-width: 700px; margin: 0 auto; color: var(--text-muted); font-size: 20px; line-height: 1.5; }
+.ys-public-actions { display: flex; justify-content: center; align-items: center; gap: 28px; margin-top: 32px; }
+.ys-public-primary, .ys-public-secondary { display: inline-flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 28px; border-radius: var(--radius-pill); font-weight: 700; text-decoration: none; transition: background-color .2s ease-in-out, color .2s ease-in-out, transform .2s ease-in-out; }
+.ys-public-primary { background: var(--accent-saffron); color: #fff; }
+.ys-public-primary:hover { background: #de503a; transform: translateY(-1px); }
+.ys-public-secondary { color: var(--text-secondary); }
+.ys-public-secondary:hover { color: var(--accent-indigo); }
+.ys-product-preview { max-width: 1280px; min-height: 580px; margin: 0 auto; overflow: hidden; border: 1px solid #e5e8eb; border-radius: 28px 28px 0 0; box-shadow: 0 -10px 40px rgba(35, 36, 31, .08); }
+.ys-preview-toolbar { display: flex; align-items: center; gap: 20px; min-height: 72px; padding: 0 32px; border-bottom: 1px solid #e5e8eb; color: var(--text-muted); }
+.ys-preview-toolbar strong { margin-right: auto; color: var(--accent-saffron); font-size: 22px; }
+.ys-preview-toolbar button { padding: 10px 18px; border: 0; border-radius: var(--radius-pill); background: #23241f; color: #fff; font-weight: 700; }
+.ys-preview-body { display: grid; grid-template-columns: 42% 58%; min-height: 508px; }
+.ys-preview-plan { padding: 52px 48px; background: #f0f0f0; }
+.ys-preview-kicker { color: var(--accent-indigo); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.ys-preview-plan h2 { margin: 0 0 16px; font-size: 40px; line-height: 1.1; }
+.ys-preview-plan > p:not(.ys-preview-kicker) { color: var(--text-muted); line-height: 1.6; }
+.ys-preview-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; color: var(--text-secondary); font-size: 14px; }
+.ys-preview-row strong { margin-left: auto; color: var(--text-primary); font-size: 12px; }
+.ys-preview-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-weight: 700; }
+.ys-preview-icon-green { background: #d9f6ea; color: #07885a; }
+.ys-preview-icon-amber { background: #fff0d9; color: #b56b00; }
+.ys-preview-icon-blue { background: #e1e5ff; color: var(--accent-indigo); }
+.ys-preview-map { position: relative; overflow: hidden; background: #dcecf1; background-image: linear-gradient(28deg, transparent 48%, rgba(255,255,255,.85) 49%, rgba(255,255,255,.85) 51%, transparent 52%), linear-gradient(105deg, transparent 48%, rgba(255,255,255,.7) 49%, rgba(255,255,255,.7) 51%, transparent 52%); background-size: 110px 100px, 150px 130px; }
+.ys-map-route { position: absolute; top: 32%; left: 18%; width: 62%; height: 28%; border: 5px solid #4ba6c0; border-color: #4ba6c0 transparent transparent #4ba6c0; border-radius: 50%; transform: rotate(14deg); }
+.ys-map-pin { position: absolute; z-index: 1; display: grid; place-items: center; width: 38px; height: 38px; border: 4px solid #fff; border-radius: 50%; background: var(--accent-indigo); color: #fff; font-weight: 700; box-shadow: var(--shadow-popover); }
+.ys-map-pin-one { top: 30%; left: 20%; }.ys-map-pin-two { top: 52%; right: 20%; background: var(--accent-saffron); }
+.ys-public-features { max-width: 1120px; margin: 0 auto; padding: 120px 32px; text-align: center; }
+.ys-public-features h2 { max-width: 700px; margin: 0 auto 48px; font-size: clamp(32px, 5vw, 52px); line-height: 1.1; }
+.ys-public-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: left; }
+.ys-public-card { padding: 28px; border: 1px solid #e5e8eb; border-radius: 16px; background: #fff; }
+.ys-public-card > span { color: var(--accent-saffron); font-size: 12px; font-weight: 700; }.ys-public-card h3 { margin: 28px 0 8px; font-size: 24px; }.ys-public-card p { margin: 0; color: var(--text-muted); line-height: 1.6; }
+.ys-public-footer { display: flex; align-items: center; gap: 24px; max-width: 1280px; margin: 0 auto; padding: 40px 32px; border-top: 1px solid #e5e8eb; color: var(--text-muted); }.ys-public-footer strong { color: var(--accent-saffron); font-size: 20px; }.ys-public-footer a { margin-left: auto; color: var(--text-primary); font-weight: 700; text-decoration: none; }
 .ys-landing-brand { position: absolute; top: 30px; left: 40px; font-weight: 750; letter-spacing: -.03em; }
 .ys-landing-copy { max-width: 660px; }
 .ys-landing h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(48px, 7vw, 88px); font-weight: 500; letter-spacing: -.06em; line-height: .99; }
@@ -80,6 +126,12 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: #f6f4ee; colo
 .ys-profile-contact > p:not(.ys-eyebrow) { margin: 6px 0 16px; color: #6f766d; font-size: 12px; }
 
 @media (max-width: 800px) {
+  .ys-app-header { gap: 12px; min-height: 64px; padding: 0 14px; }.ys-app-header .ys-brand-name, .ys-user-label, .ys-app-actions .ys-mode-badge { display: none; }.ys-app-header .ys-nav { overflow-x: auto; }.ys-app-header .ys-nav a { padding: 0 8px; font-size: 11px; white-space: nowrap; }.ys-header-button { padding: 7px 9px; }
+  .ys-public-nav { padding: 16px; }.ys-public-nav nav { gap: 10px; }.ys-public-nav nav a:not(.ys-public-signup) { display: none; }
+  .ys-public-hero { padding: 90px 20px 56px; }.ys-public-hero h1 { font-size: clamp(42px, 13vw, 64px); }.ys-public-hero > p:not(.ys-eyebrow) { font-size: 17px; }
+  .ys-public-actions { flex-direction: column; gap: 8px; }.ys-public-primary, .ys-public-secondary { width: 100%; justify-content: center; }
+  .ys-product-preview { margin: 0 16px; border-radius: 18px 18px 0 0; }.ys-preview-toolbar { padding: 0 16px; }.ys-preview-toolbar span { display: none; }.ys-preview-body { grid-template-columns: 1fr; }.ys-preview-plan { padding: 32px 24px; }.ys-preview-map { min-height: 300px; }
+  .ys-public-features { padding: 80px 20px; }.ys-public-grid { grid-template-columns: 1fr; }.ys-public-footer { flex-wrap: wrap; padding: 28px 20px; }.ys-public-footer a { width: 100%; margin-left: 0; }
   .ys-shell { display: block; padding-bottom: 68px; }
   .ys-sidebar { position: fixed; z-index: 20; top: auto; bottom: 0; width: 100%; height: 64px; padding: 7px 8px; border-top: 1px solid #e5e2d9; border-right: 0; }
   .ys-brand, .ys-nav-label, .ys-sidebar-note { display: none; }
@@ -97,4 +149,183 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: #f6f4ee; colo
   .ys-form-actions { align-items: flex-start; flex-direction: column; }
   .ys-landing { min-height: 100svh; grid-template-columns: 1fr; gap: 32px; padding: 90px 24px 32px; }
   .ys-landing-brand { left: 24px; }
+}
+
+/* Shared reference-inspired application surfaces.
+   Route pages keep their data-bound markup and use this layer for consistent
+   spacing, hierarchy, focus treatment, and responsive behavior. */
+.ys-page,
+.ys-form-page {
+  width: 100%;
+  max-width: 980px;
+  padding: clamp(24px, 4vw, 48px);
+  border: 1px solid #e5e8eb;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(35, 36, 31, .06);
+}
+
+.ys-page h1,
+.ys-form-page h1 {
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.ys-page h2,
+.ys-form-page h2,
+.ys-trip-items-heading h2,
+.ys-profile-contact h2 {
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.ys-form-intro,
+.ys-page p,
+.ys-form-footnote {
+  color: var(--text-secondary);
+}
+
+.ys-field {
+  color: var(--text-primary);
+}
+
+.ys-field input,
+.ys-field select,
+.ys-field textarea {
+  min-height: 48px;
+  border-color: #d8dce1;
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--text-primary);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.ys-field input:hover,
+.ys-field select:hover,
+.ys-field textarea:hover {
+  border-color: #aeb6bf;
+}
+
+.ys-field input:focus,
+.ys-field select:focus,
+.ys-field textarea:focus,
+.ys-check-field input:focus,
+.ys-secondary-button:focus-visible,
+.ys-button:focus-visible,
+.ys-header-button:focus-visible,
+.ys-nav a:focus-visible {
+  outline: 3px solid rgba(63, 82, 227, .22);
+  outline-offset: 2px;
+  border-color: var(--accent-indigo);
+}
+
+.ys-button,
+.ys-page a.ys-button,
+.ys-form-page a.ys-button {
+  background: var(--accent-saffron);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  transition: transform .15s ease, background-color .15s ease;
+}
+
+.ys-button:hover {
+  background: #de503a;
+  transform: translateY(-1px);
+}
+
+.ys-secondary-button {
+  border-color: #cfd5dc;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: var(--accent-indigo);
+  transition: border-color .15s ease, background-color .15s ease;
+}
+
+.ys-secondary-button:hover {
+  border-color: var(--accent-indigo);
+  background: #f4f5ff;
+}
+
+.ys-form-actions {
+  border-top-color: #e5e8eb;
+}
+
+.ys-intent-preview,
+.ys-trip-start,
+.ys-profile-contact,
+.ys-async-state {
+  border-color: #e5e8eb;
+  border-radius: var(--radius-md);
+  background: #f7f8fa;
+}
+
+.ys-trip-item {
+  border-color: #e5e8eb;
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(35, 36, 31, .04);
+}
+
+.ys-async-state h2,
+.ys-trip-start strong {
+  color: var(--text-primary);
+}
+
+.ys-async-state p,
+.ys-trip-start span,
+.ys-trip-start small,
+.ys-profile-contact > p:not(.ys-eyebrow) {
+  color: var(--text-secondary);
+}
+
+.pill-saffron,
+.pill-purple,
+.pill-gold,
+.pill-blue,
+.pill-green,
+.pill-red {
+  border-color: transparent;
+}
+
+.pill-saffron { background: #fff0ed; color: #c43d2d; }
+.pill-purple { background: #eef0ff; color: #3f52b8; }
+.pill-gold { background: #fff4df; color: #a86d08; }
+.pill-blue { background: #e6f7fa; color: #087d91; }
+.pill-green { background: #e4f8ef; color: #08784f; }
+.pill-red { background: #ffe9ec; color: #b52d45; }
+
+@media (max-width: 800px) {
+  .ys-page,
+  .ys-form-page {
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+
+  .ys-trip-items-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ys-trip-items-heading > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ys-trip-items-heading > div:last-child .ys-secondary-button {
+    margin-left: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

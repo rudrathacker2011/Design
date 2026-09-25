@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { useApp } from '@/modules/profile/app-context';
-import { runtimeConfig } from '@/lib/config/runtime';
+import { useAuth } from '@/modules/auth/AuthProvider';
 
 const links = [
   { href: '/dashboard', label: 'Overview', section: 'Your journey' },
@@ -22,43 +21,22 @@ const links = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { resetDemo } = useApp();
-  const handleReset = () => {
-    if (window.confirm('Reset the saved YatraSetu demo journey in this browser?')) resetDemo();
-  };
+  const { signOut, user } = useAuth();
 
   return (
     <div className="ys-shell">
-      <aside className="ys-sidebar">
-        <Link className="ys-brand" href="/dashboard">
-          <span className="ys-brand-mark" aria-hidden="true">Y</span>
-          <span className="ys-brand-name">YatraSetu</span>
-        </Link>
+      <header className="ys-app-header">
+        <Link className="ys-brand" href="/dashboard"><span className="ys-brand-mark" aria-hidden="true">Y</span><span className="ys-brand-name">YatraSetu</span></Link>
         <nav className="ys-nav" aria-label="Main navigation">
-          {links.map(({ href, label, section }) => (
-            <div key={href} className="ys-nav-entry">
-              {section && <p className="ys-nav-label">{section}</p>}
-              <Link href={href} aria-current={pathname === href ? 'page' : undefined}>{label}</Link>
-            </div>
-          ))}
+          {links.slice(0, 7).map(({ href, label }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}>{label}</Link>)}
         </nav>
-        <div className={`ys-sidebar-note ys-mode-note ys-mode-${runtimeConfig.mode}`}>
-          <strong>{runtimeConfig.mode === 'demo' ? 'Demo mode · illustrative data' : 'Production workspace'}</strong>
-          {runtimeConfig.mode === 'demo'
-            ? 'No live conditions, bookings, or emergency dispatch are represented.'
-            : 'Live data and actions are subject to provider availability and your permissions.'}
-          {runtimeConfig.mode === 'demo' && (
-            <button className="ys-reset-demo" type="button" onClick={handleReset}>Reset demo journey</button>
-          )}
+        <div className="ys-app-actions">
+          <span className="ys-user-label">{user?.email ?? 'Traveller'}</span>
+          {user && <button className="ys-header-button" type="button" onClick={() => void signOut()}>Sign out</button>}
         </div>
-      </aside>
+      </header>
       <main className="ys-main">
-        <div className="ys-topbar">
-          <span>Travel planning</span>
-          <span className={`ys-mode-badge ys-mode-badge-${runtimeConfig.mode}`}>
-            {runtimeConfig.mode === 'demo' ? 'Demo workspace · data is illustrative, not live' : 'Production workspace'}
-          </span>
-        </div>
+        <div className="ys-topbar"><span>Travel planning</span><span>Provider availability and permissions apply</span></div>
         <div className="ys-stage">{children}</div>
       </main>
     </div>

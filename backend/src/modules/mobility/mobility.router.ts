@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../lib/validation.js';
 import { ok, fail } from '../../lib/response.js';
-import { optionalAuth } from '../../lib/auth.js';
+import { prisma } from '../../lib/db.js';
 
 export const mobilityRouter = Router();
 
@@ -57,6 +57,11 @@ mobilityRouter.get('/routes', async (req, res) => {
       return res.status(400).json(fail('VALIDATION_ERROR', 'Invalid mobility query parameters.'));
     }
     const { origin, destination, travelPace, accessibilityNeeds } = parseResult.data;
+
+    if (!process.env.GOOGLE_MAPS_API_KEY) {
+      res.status(503).json(fail('PROVIDER_UNAVAILABLE', 'Live route planning is not configured. Add the maps provider credentials before requesting transport options.', { retryable: true }));
+      return;
+    }
 
     // Multi-modal route generator based on Indian travel network
     const routes: RouteOption[] = [
@@ -120,55 +125,30 @@ mobilityRouter.get('/routes', async (req, res) => {
  */
 mobilityRouter.get('/arrival-points', async (req, res) => {
   try {
-    const destination = (req.query.destination as string) || 'Destination';
-
-    const arrivalPoints: ArrivalPoint[] = [
-      {
-        id: 'arr-railway-central',
-        name: `${destination} Central Junction`,
-        type: 'RAILWAY_STATION',
-        distanceKm: 4.2,
-        travelTimeMin: 15,
-        facilities: {
-          hasPrepaidTaxi: true,
-          hasWheelchairAccess: true,
-          hasRestrooms: true,
-          hasTransitHub: true,
-        },
-        recommendationScore: 94,
-        suitabilityReason: 'Highest connectivity with regulated prepaid booth and direct bus shuttle.',
+    const destination = typeof req.query.destination === 'string' ? req.query.destination : '';
+    const destinationRecord = await prisma.destination.findFirst({
+      where: { OR: [{ slug: destination }, { name: destination }], isActive: true },
+      include: { arrivalPoints: { where: { isActive: true }, orderBy: { overallRank: 'asc' } } },
+    });
+    if (!destinationRecord) {
+      res.status(404).json(fail('NOT_FOUND', 'Destination or arrival points not found.'));
+      return;
+    }
+    const arrivalPoints: ArrivalPoint[] = destinationRecord.arrivalPoints.map((point) => ({
+      id: point.id,
+      name: point.name,
+      type: 'RAILWAY_STATION',
+      distanceKm: point.distanceToDestinationKm ?? 0,
+      travelTimeMin: point.walkingMinutesToDest ?? 0,
+      facilities: {
+        hasPrepaidTaxi: point.facilities.some((item) => item.toLowerCase().includes('taxi')),
+        hasWheelchairAccess: point.accessibilityScore >= 70,
+        hasRestrooms: point.facilities.some((item) => item.toLowerCase().includes('restroom')),
+        hasTransitHub: point.facilities.some((item) => item.toLowerCase().includes('transit')),
       },
-      {
-        id: 'arr-airport',
-        name: `${destination} Domestic Airport`,
-        type: 'AIRPORT',
-        distanceKm: 22.5,
-        travelTimeMin: 45,
-        facilities: {
-          hasPrepaidTaxi: true,
-          hasWheelchairAccess: true,
-          hasRestrooms: true,
-          hasTransitHub: false,
-        },
-        recommendationScore: 88,
-        suitabilityReason: 'Fastest for long-distance travellers; app-cab pick-up zones available 24/7.',
-      },
-      {
-        id: 'arr-isbt-terminal',
-        name: `${destination} Inter-State Bus Terminal`,
-        type: 'BUS_TERMINAL',
-        distanceKm: 7.1,
-        travelTimeMin: 25,
-        facilities: {
-          hasPrepaidTaxi: false,
-          hasWheelchairAccess: true,
-          hasRestrooms: true,
-          hasTransitHub: true,
-        },
-        recommendationScore: 78,
-        suitabilityReason: 'Economical entry point; frequent intra-city feeder buses available.',
-      },
-    ];
+      recommendationScore: point.overallRank,
+      suitabilityReason: point.facilities.join(', ') || 'No facility details have been recorded.',
+    }));
 
     res.json(ok({ destination, arrivalPoints }));
   } catch (err: any) {
